@@ -19,3 +19,5 @@
 !/checkstyle.xml
 !/.editorconfig
 !/crowdin.yml
+
+!/notarize-mac.sh
