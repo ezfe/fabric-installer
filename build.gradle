@@ -6,6 +6,7 @@ plugins {
 	id "com.diffplug.spotless" version "6.20.0"
 	id "de.undercouch.download" version "5.6.0"
 	id "me.modmuss50.remotesign" version "0.4.0"
+	id "org.panteleyev.jpackageplugin" version "1.5.1"
 }
 
 version = '1.1.0'
@@ -198,4 +199,20 @@ publish.mustRunAfter checkVersion
 class FileOutput extends DefaultTask {
 	@OutputFile
 	File output
+}
+
+jpackage {
+    mainClass = 'net.fabricmc.installer.Main'
+    mainJar = shadowJar.archiveFile.get().getAsFile().name
+    appName = 'Fabric Installer'
+    appVersion = project.version.replace('+local', '')
+    vendor = 'FabricMC'
+    destination = layout.buildDirectory.get().dir('jpackage').toString()
+    icon = 'src/main/resources/icon.icns'
+    input = shadowJar.archiveFile.get().getAsFile().parentFile
+    type = 'app-image'
+
+    mac {
+        macPackageName = 'Fabric Installer'
+    }
 }
