@@ -4,14 +4,11 @@ set -e
 
 # Your Developer ID Application certificate name
 DEVELOPER_APP_ID="Developer ID Application: Ezekiel Elin (39QG79F7FD)"
-# Your Developer ID Installer certificate name
-DEVELOPER_INSTALLER_ID="Developer ID Installer: Ezekiel Elin (39QG79F7FD)"
 
 
 # Path to the app bundle
 APP_BUNDLE="build/jpackage/Fabric Installer.app"
-# Path for the final PKG
-PKG_PATH="build/jpackage/Fabric Installer.pkg"
+
 
 # --- Sign dylib in jar ---
 JAR_FILE=$(find "$APP_BUNDLE/Contents/app" -name "*.jar" | head -n 1)
@@ -43,10 +40,11 @@ codesign -vvv --options runtime --force --sign "$DEVELOPER_APP_ID" "$APP_BUNDLE"
 echo "App bundle signed successfully."
 
 
-# --- Packaging ---
-echo "Creating PKG installer..."
-productbuild --component "$APP_BUNDLE" /Applications --sign "$DEVELOPER_INSTALLER_ID" "$PKG_PATH"
-echo "PKG installer created at $PKG_PATH"
+# --- Zipping ---
+echo "Creating zip for notarization..."
+ZIP_PATH="build/jpackage/Fabric Installer.zip"
+ditto -c -k --sequesterRsrc --keepParent "$APP_BUNDLE" "$ZIP_PATH"
+echo "Zip created at $ZIP_PATH"
 
 
 # --- Notarization ---
@@ -57,8 +55,8 @@ if [ -z "$APPLE_ID" ] || [ -z "$APP_SPECIFIC_PASSWORD" ]; then
     exit 1
 fi
 
-echo "Submitting PKG for notarization..."
-NOTARIZATION_INFO=$(xcrun notarytool submit "$PKG_PATH" --apple-id "$APPLE_ID" --password "$APP_SPECIFIC_PASSWORD" --team-id 39QG79F7FD --wait --output-format json)
+echo "Submitting APP for notarization..."
+NOTARIZATION_INFO=$(xcrun notarytool submit "$ZIP_PATH" --apple-id "$APPLE_ID" --password "$APP_SPECIFIC_PASSWORD" --team-id 39QG79F7FD --wait --output-format json)
 NOTARIZATION_UUID=$(echo "$NOTARIZATION_INFO" | jq -r '.id')
 NOTARIZATION_STATUS=$(echo "$NOTARIZATION_INFO" | jq -r '.status')
 
@@ -71,10 +69,14 @@ fi
 
 echo "Notarization successful."
 
+# --- Cleanup ---
+echo "Removing temporary zip file..."
+rm "$ZIP_PATH"
+
 
 # --- Stapling ---
-echo "Stapling notarization ticket to PKG..."
-xcrun stapler staple "$PKG_PATH"
+echo "Stapling notarization ticket to APP..."
+xcrun stapler staple "$APP_BUNDLE"
 echo "Stapling complete."
 
-echo "Process complete. Final PKG is at $PKG_PATH"
+echo "Process complete. Final APP is at $APP_BUNDLE"
